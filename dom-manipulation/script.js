@@ -129,7 +129,7 @@ async function syncQuotes() {
 
   if (updated) {
     localStorage.setItem("quotes", JSON.stringify(localQuotes));
-    notify("Quotes updated from server");
+    notify("Quotes synced with server!");
   }
 }
 
@@ -146,7 +146,7 @@ setInterval(() => {
 async function init() {
   const serverQuotes = await fetchQuotesFromServer();
   localQuotes = serverQuotes;
-  localStorage.setItem("quotes", JSON.stringify(localQuotes));
+  localStorage.setItem("Quotes", JSON.stringify(localQuotes));
   showRandomQuote();
 }
 
