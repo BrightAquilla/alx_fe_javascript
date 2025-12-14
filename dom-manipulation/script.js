@@ -1,61 +1,72 @@
 /*********************************
- * MOCK SERVER (SIMULATED API)
- *********************************/
-let mockServerQuotes = [
-  { id: 1, text: "The best way to predict the future is to create it.", category: "Motivation", updatedAt: Date.now() },
-  { id: 2, text: "Talk is cheap. Show me the code.", category: "Programming", updatedAt: Date.now() }
-];
-
-// Simulate GET request
-function fetchQuotesFromServer() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...mockServerQuotes]);
-    }, 800);
-  });
-}
-
-// Simulate POST request
-function postQuoteToServer(quote) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const serverQuote = {
-        ...quote,
-        id: Date.now(),
-        updatedAt: Date.now()
-      };
-      mockServerQuotes.push(serverQuote);
-      resolve(serverQuote);
-    }, 800);
-  });
-}
-
-/*********************************
- * LOCAL STATE & STORAGE
- *********************************/
-let localQuotes = JSON.parse(localStorage.getItem("quotes")) || [];
-
-/*********************************
  * DOM ELEMENTS
  *********************************/
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteButton = document.getElementById("newQuote");
 
+/*********************************
+ * UI NOTIFICATION ELEMENT
+ *********************************/
 const notification = document.createElement("div");
 notification.style.marginTop = "10px";
+notification.style.color = "green";
 document.body.appendChild(notification);
 
-/*********************************
- * UI FUNCTIONS
- *********************************/
 function notify(message) {
   notification.textContent = message;
-  notification.style.color = "green";
-  setTimeout(() => (notification.textContent = ""), 3000);
+  setTimeout(() => {
+    notification.textContent = "";
+  }, 3000);
 }
 
 /*********************************
- * CORE FUNCTIONS
+ * LOCAL STORAGE
+ *********************************/
+let localQuotes = JSON.parse(localStorage.getItem("quotes")) || [];
+
+/*********************************
+ * FETCH FROM MOCK API (REQUIRED)
+ *********************************/
+async function fetchQuotesFromServer() {
+  const response = await fetch("https://jsonplaceholder.typicode.com/posts");
+  const data = await response.json(); // REQUIRED .json()
+
+  // Convert posts to quote objects
+  return data.slice(0, 5).map(post => ({
+    id: post.id,
+    text: post.title,
+    category: "Mock API",
+    updatedAt: Date.now()
+  }));
+}
+
+/*********************************
+ * POST TO MOCK API (REQUIRED)
+ *********************************/
+async function postQuoteToServer(quote) {
+  const response = await fetch(
+    "https://jsonplaceholder.typicode.com/posts",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(quote)
+    }
+  );
+
+  const data = await response.json();
+
+  return {
+    id: data.id || Date.now(),
+    text: quote.text,
+    category: quote.category,
+    updatedAt: Date.now()
+  };
+}
+
+/*********************************
+ * DISPLAY RANDOM QUOTE
  *********************************/
 function showRandomQuote() {
   if (localQuotes.length === 0) {
@@ -63,16 +74,22 @@ function showRandomQuote() {
     return;
   }
 
-  const random = localQuotes[Math.floor(Math.random() * localQuotes.length)];
-  quoteDisplay.textContent = `"${random.text}" — ${random.category}`;
+  const randomQuote =
+    localQuotes[Math.floor(Math.random() * localQuotes.length)];
+
+  quoteDisplay.textContent =
+    `"${randomQuote.text}" — ${randomQuote.category}`;
 }
 
+/*********************************
+ * ADD QUOTE
+ *********************************/
 async function addQuote() {
   const text = document.getElementById("newQuoteText").value;
   const category = document.getElementById("newQuoteCategory").value;
 
   if (!text || !category) {
-    alert("Please fill all fields");
+    alert("Please fill in both fields");
     return;
   }
 
@@ -91,13 +108,13 @@ async function addQuote() {
 }
 
 /*********************************
- * SYNC & CONFLICT RESOLUTION
+ * SYNC WITH SERVER (REQUIRED)
  *********************************/
 async function syncQuotes() {
   const serverQuotes = await fetchQuotesFromServer();
   let updated = false;
 
-  serverQuotes.forEach((serverQuote) => {
+  serverQuotes.forEach(serverQuote => {
     const localQuote = localQuotes.find(q => q.id === serverQuote.id);
 
     if (!localQuote) {
@@ -112,16 +129,16 @@ async function syncQuotes() {
 
   if (updated) {
     localStorage.setItem("quotes", JSON.stringify(localQuotes));
-    notify("Quotes synced from server");
+    notify("Quotes updated from server");
   }
 }
 
 /*********************************
- * PERIODIC SERVER CHECK
+ * PERIODIC SERVER CHECK (REQUIRED)
  *********************************/
 setInterval(() => {
   syncQuotes();
-}, 5000); // check every 5 seconds
+}, 5000);
 
 /*********************************
  * INITIAL LOAD
